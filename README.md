@@ -1,3 +1,15 @@
+# novapay-backend-exam
+
+Backend services consolidated for the Novapay exam.
+
+Quick start
+
+```bash
+npm install
+npm run start:dev
+```
+
+Repository pushed to git@github.com:shakil10sk/novapay-backend-exam.git
 # NovaPay Backend: Enterprise-Grade Transaction Processor
 
 NovaPay Backend is a high-throughput, fault-tolerant financial engine built on **NestJS** and **PostgreSQL**. It is designed to never double-disburse, never lose an unbalanced ledger, and never apply a stale FX rate.
