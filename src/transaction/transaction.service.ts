@@ -130,13 +130,13 @@ export class TransactionService {
         let creditAmount = dto.amount;
 
         // Handle FX rate locking (Problem 3)
+        // Validate the quote ahead of time but only consume it after we have a real transaction id.
         if (dto.fxQuoteId) {
-            const quote = await this.fxService.consumeQuote(dto.fxQuoteId, 'PENDING_TXN');
-            if (quote.baseCurrency !== sender.currency || quote.quoteCurrency !== receiver.currency) {
+            const quotePreview = await this.fxService.getQuote(dto.fxQuoteId);
+            if (quotePreview.baseCurrency !== sender.currency || quotePreview.quoteCurrency !== receiver.currency) {
                 throw new BadRequestException('FX quote currency mismatch with wallet currencies.');
             }
-            fxRate = quote.rate;
-            creditAmount = Number(quote.amountQuote);
+            // fxRate/creditAmount will be set once the quote is consumed (after txn persisted)
         } else if (sender.currency !== receiver.currency) {
             throw new BadRequestException('FX quote ID is required for cross-currency transfers.');
         }
@@ -158,6 +158,14 @@ export class TransactionService {
         const savedTxn = await this.transactionRepo.save(txn);
 
         try {
+            // If this is an FX transfer, consume the quote now that we have the real transaction id
+            if (dto.fxQuoteId) {
+                const consumed = await this.fxService.consumeQuote(dto.fxQuoteId, savedTxn.id);
+                fxRate = consumed.rate;
+                creditAmount = Number(consumed.amountQuote);
+                savedTxn.fxRate = fxRate;
+                await this.transactionRepo.save(savedTxn);
+            }
             // Problem 1: Atomic Double-Entry (Problem 1, Problem 3 Single-use quote recorded)
             await this.ledgerService.postDoubleEntry({
                 transactionId: savedTxn.id,
