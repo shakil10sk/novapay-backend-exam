@@ -1,0 +1,189 @@
+
+services:
+  # ── Databases (one per service) ──────────────────────────────────────────
+  db-account:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: novapay_account
+    ports:
+      - "5433:5432"
+    volumes:
+      - db-account-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d novapay_account"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  db-ledger:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: novapay_ledger
+    ports:
+      - "5434:5432"
+    volumes:
+      - db-ledger-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d novapay_ledger"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  db-txn:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: novapay_txn
+    ports:
+      - "5435:5432"
+    volumes:
+      - db-txn-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d novapay_txn"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  db-fx:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: novapay_fx
+    ports:
+      - "5436:5432"
+    volumes:
+      - db-fx-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d novapay_fx"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  db-payroll:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: novapay_payroll
+    ports:
+      - "5437:5432"
+    volumes:
+      - db-payroll-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d novapay_payroll"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Redis ─────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── Observability ─────────────────────────────────────────────────────────
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "4317:4317"    # OTLP gRPC
+      - "4318:4318"    # OTLP HTTP
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    depends_on:
+      - novapay-api
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
+  # ── NovaPay API (Gateway + All Services) ─────────────────────────────────
+  novapay-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      ENCRYPTION_KEY: 2b7e151628aed2a6abf7158809cf4f3c2b7e151628aed2a6abf7158809cf4f3c
+      ACCOUNT_DB_HOST: db-account
+      ACCOUNT_DB_PORT: 5432
+      ACCOUNT_DB_USER: root
+      ACCOUNT_DB_PASS: password
+      ACCOUNT_DB_NAME: novapay_account
+      LEDGER_DB_HOST: db-ledger
+      LEDGER_DB_PORT: 5432
+      LEDGER_DB_USER: root
+      LEDGER_DB_PASS: password
+      LEDGER_DB_NAME: novapay_ledger
+      TRANSACTION_DB_HOST: db-txn
+      TRANSACTION_DB_PORT: 5432
+      TRANSACTION_DB_USER: root
+      TRANSACTION_DB_PASS: password
+      TRANSACTION_DB_NAME: novapay_txn
+      FX_DB_HOST: db-fx
+      FX_DB_PORT: 5432
+      FX_DB_USER: root
+      FX_DB_PASS: password
+      FX_DB_NAME: novapay_fx
+      PAYROLL_DB_HOST: db-payroll
+      PAYROLL_DB_PORT: 5432
+      PAYROLL_DB_USER: root
+      PAYROLL_DB_PASS: password
+      PAYROLL_DB_NAME: novapay_payroll
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      FX_PROVIDER_STATUS: up
+      IDEMPOTENCY_TTL_HOURS: 24
+    depends_on:
+      db-account:
+        condition: service_healthy
+      db-ledger:
+        condition: service_healthy
+      db-txn:
+        condition: service_healthy
+      db-fx:
+        condition: service_healthy
+      db-payroll:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      jaeger:
+        condition: service_started
+
+volumes:
+  db-account-data:
+  db-ledger-data:
+  db-txn-data:
+  db-fx-data:
+  db-payroll-data:
+  grafana-data:
