@@ -1,8 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TransactionService } from './transaction.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Transaction, TransactionStatus, TransactionType } from './entities/transaction.entity';
-import { IdempotencyKey, IdempotencyStatus } from './entities/idempotency-key.entity';
+import { Transaction, TransactionStatus } from './entities/transaction.entity';
+import {
+  IdempotencyKey,
+  IdempotencyStatus,
+} from './entities/idempotency-key.entity';
 import { MetricsService } from '../metrics/metrics.service';
 import { AccountService } from '../account/account.service';
 import { LedgerService } from '../ledger/ledger.service';
@@ -58,8 +61,14 @@ describe('TransactionService (unit)', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TransactionService,
-        { provide: getRepositoryToken(Transaction, 'transactionConnection'), useValue: mockTxnRepo },
-        { provide: getRepositoryToken(IdempotencyKey, 'transactionConnection'), useValue: mockIdempRepo },
+        {
+          provide: getRepositoryToken(Transaction, 'transactionConnection'),
+          useValue: mockTxnRepo,
+        },
+        {
+          provide: getRepositoryToken(IdempotencyKey, 'transactionConnection'),
+          useValue: mockIdempRepo,
+        },
         { provide: AccountService, useValue: mockAccount },
         { provide: LedgerService, useValue: mockLedger },
         { provide: FxService, useValue: mockFx },
@@ -75,38 +84,80 @@ describe('TransactionService (unit)', () => {
     // idempotency key not found -> created normally
     mockIdempRepo.findOne.mockResolvedValue(null);
     mockIdempRepo.create.mockReturnValue({});
-    mockIdempRepo.save.mockResolvedValue({ id: 'ik-1', status: IdempotencyStatus.PROCESSING });
+    mockIdempRepo.save.mockResolvedValue({
+      id: 'ik-1',
+      status: IdempotencyStatus.PROCESSING,
+    });
 
     // wallets
-    mockAccount.getWalletById.mockResolvedValueOnce({ id: 'w-1', currency: 'USD', ownerName: 'A' });
-    mockAccount.getWalletById.mockResolvedValueOnce({ id: 'w-2', currency: 'USD', ownerName: 'B' });
+    mockAccount.getWalletById.mockResolvedValueOnce({
+      id: 'w-1',
+      currency: 'USD',
+      ownerName: 'A',
+    });
+    mockAccount.getWalletById.mockResolvedValueOnce({
+      id: 'w-2',
+      currency: 'USD',
+      ownerName: 'B',
+    });
 
     mockLedger.getBalance.mockResolvedValue({ balance: 0 });
 
-    const dto: any = { senderWalletId: 'w-1', receiverWalletId: 'w-2', amount: 10, currency: 'USD', idempotencyKey: 'key-1' };
+    const dto: any = {
+      senderWalletId: 'w-1',
+      receiverWalletId: 'w-2',
+      amount: 10,
+      currency: 'USD',
+      idempotencyKey: 'key-1',
+    };
 
-    await expect(service.executeTransfer(dto)).rejects.toThrow(BadRequestException);
+    await expect(service.executeTransfer(dto)).rejects.toThrow(
+      BadRequestException,
+    );
     expect(mockIdempRepo.save).toHaveBeenCalled();
   });
 
   it('executeTransfer: completes a domestic transfer', async () => {
     mockIdempRepo.findOne.mockResolvedValue(null);
     mockIdempRepo.create.mockReturnValue({});
-    mockIdempRepo.save.mockResolvedValue({ id: 'ik-2', status: IdempotencyStatus.PROCESSING });
+    mockIdempRepo.save.mockResolvedValue({
+      id: 'ik-2',
+      status: IdempotencyStatus.PROCESSING,
+    });
 
-    mockAccount.getWalletById.mockResolvedValueOnce({ id: 'w-1', currency: 'USD', ownerName: 'Alice' });
-    mockAccount.getWalletById.mockResolvedValueOnce({ id: 'w-2', currency: 'USD', ownerName: 'Bob' });
+    mockAccount.getWalletById.mockResolvedValueOnce({
+      id: 'w-1',
+      currency: 'USD',
+      ownerName: 'Alice',
+    });
+    mockAccount.getWalletById.mockResolvedValueOnce({
+      id: 'w-2',
+      currency: 'USD',
+      ownerName: 'Bob',
+    });
 
     mockLedger.getBalance.mockResolvedValue({ balance: 100 });
 
-    const savedTxn = { id: 'txn-1', status: TransactionStatus.PENDING } as Transaction;
+    const savedTxn = {
+      id: 'txn-1',
+      status: TransactionStatus.PENDING,
+    } as Transaction;
     mockTxnRepo.create.mockReturnValue(savedTxn);
     mockTxnRepo.save.mockResolvedValue(savedTxn);
 
     mockLedger.postDoubleEntry.mockResolvedValue(undefined);
-    mockTxnRepo.save.mockResolvedValueOnce(savedTxn).mockResolvedValueOnce({ ...savedTxn, status: TransactionStatus.COMPLETED });
+    mockTxnRepo.save.mockResolvedValueOnce(savedTxn).mockResolvedValueOnce({
+      ...savedTxn,
+      status: TransactionStatus.COMPLETED,
+    });
 
-    const dto: any = { senderWalletId: 'w-1', receiverWalletId: 'w-2', amount: 10, currency: 'USD', idempotencyKey: 'key-2' };
+    const dto: any = {
+      senderWalletId: 'w-1',
+      receiverWalletId: 'w-2',
+      amount: 10,
+      currency: 'USD',
+      idempotencyKey: 'key-2',
+    };
 
     const res = await service.executeTransfer(dto);
     expect(mockLedger.postDoubleEntry).toHaveBeenCalled();
@@ -114,9 +165,21 @@ describe('TransactionService (unit)', () => {
   });
 
   it('executeTransfer: rejects concurrent processing (conflict) when key locked', async () => {
-    mockIdempRepo.findOne.mockResolvedValue({ key: 'key-3', status: IdempotencyStatus.PROCESSING, payloadHash: 'h' });
-    const dto: any = { senderWalletId: 'w-1', receiverWalletId: 'w-2', amount: 1, currency: 'USD', idempotencyKey: 'key-3' };
-    await expect(service.executeTransfer(dto)).rejects.toThrow(ConflictException);
+    mockIdempRepo.findOne.mockResolvedValue({
+      key: 'key-3',
+      status: IdempotencyStatus.PROCESSING,
+      payloadHash: 'h',
+    });
+    const dto: any = {
+      senderWalletId: 'w-1',
+      receiverWalletId: 'w-2',
+      amount: 1,
+      currency: 'USD',
+      idempotencyKey: 'key-3',
+    };
+    await expect(service.executeTransfer(dto)).rejects.toThrow(
+      ConflictException,
+    );
     expect(mockMetrics.idempotencyHits.inc).toHaveBeenCalled();
   });
 });

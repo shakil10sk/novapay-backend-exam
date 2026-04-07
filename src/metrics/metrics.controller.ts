@@ -5,12 +5,12 @@ import { ApiTags, ApiOperation } from '@nestjs/swagger';
 @ApiTags('Metrics')
 @Controller('metrics')
 export class MetricsController {
-    constructor(private readonly metricsService: MetricsService) { }
+  constructor(private readonly metricsService: MetricsService) {}
 
-    @Get()
-    @Header('Content-Type', 'text/plain')
-    @ApiOperation({ summary: 'Prometheus metrics endpoint' })
-    async getMetrics(): Promise<string> {
-        return this.metricsService.getMetrics();
-    }
+  @Get()
+  @Header('Content-Type', 'text/plain')
+  @ApiOperation({ summary: 'Prometheus metrics endpoint' })
+  async getMetrics(): Promise<string> {
+    return this.metricsService.getMetrics();
+  }
 }

@@ -1,15 +1,15 @@
 import {
-    Entity,
-    PrimaryGeneratedColumn,
-    Column,
-    CreateDateColumn,
-    Index,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  Index,
 } from 'typeorm';
 
 export enum IdempotencyStatus {
-    PROCESSING = 'PROCESSING',
-    COMPLETED = 'COMPLETED',
-    FAILED = 'FAILED',
+  PROCESSING = 'PROCESSING',
+  COMPLETED = 'COMPLETED',
+  FAILED = 'FAILED',
 }
 
 /**
@@ -32,41 +32,45 @@ export enum IdempotencyStatus {
  */
 @Entity('idempotency_keys')
 export class IdempotencyKey {
-    @PrimaryGeneratedColumn('uuid')
-    id: string;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-    @Index('idx_idempotency_keys_key', { unique: true })
-    @Column({ length: 512 })
-    key: string;
+  @Index('idx_idempotency_keys_key', { unique: true })
+  @Column({ length: 512 })
+  key: string;
 
-    /**
-     * SHA-256 of the original request payload (sorted JSON).
-     * Used to detect Scenario E: same key, different payload.
-     */
-    @Column({ name: 'payload_hash', length: 64 })
-    payloadHash: string;
+  /**
+   * SHA-256 of the original request payload (sorted JSON).
+   * Used to detect Scenario E: same key, different payload.
+   */
+  @Column({ name: 'payload_hash', length: 64 })
+  payloadHash: string;
 
-    @Column({ type: 'varchar', length: 20, default: IdempotencyStatus.PROCESSING })
-    status: IdempotencyStatus;
+  @Column({
+    type: 'varchar',
+    length: 20,
+    default: IdempotencyStatus.PROCESSING,
+  })
+  status: IdempotencyStatus;
 
-    /**
-     * The transaction ID created by the first successful request.
-     * Returned to all subsequent duplicate requests.
-     */
-    @Column({ name: 'transaction_id', nullable: true })
-    transactionId: string;
+  /**
+   * The transaction ID created by the first successful request.
+   * Returned to all subsequent duplicate requests.
+   */
+  @Column({ name: 'transaction_id', nullable: true })
+  transactionId: string;
 
-    /**
-     * Full cached response body serialized to JSON.
-     * Returned as-is to duplicate requests — even if the underlying
-     * transaction was later reversed.
-     */
-    @Column({ name: 'response_body', type: 'text', nullable: true })
-    responseBody: string;
+  /**
+   * Full cached response body serialized to JSON.
+   * Returned as-is to duplicate requests — even if the underlying
+   * transaction was later reversed.
+   */
+  @Column({ name: 'response_body', type: 'text', nullable: true })
+  responseBody: string;
 
-    @Column({ name: 'expires_at', type: 'timestamptz' })
-    expiresAt: Date;
+  @Column({ name: 'expires_at', type: 'timestamptz' })
+  expiresAt: Date;
 
-    @CreateDateColumn({ name: 'created_at' })
-    createdAt: Date;
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt: Date;
 }

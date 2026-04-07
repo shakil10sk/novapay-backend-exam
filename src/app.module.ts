@@ -9,18 +9,18 @@ import { MetricsModule } from './metrics/metrics.module';
 import { AdminModule } from './admin/admin.module';
 
 @Module({
-    imports: [
-        ConfigModule.forRoot({
-            isGlobal: true,
-            envFilePath: '.env',
-        }),
-        MetricsModule,
-        AccountModule,
-        LedgerModule,
-        TransactionModule,
-        FxModule,
-        PayrollModule,
-        AdminModule,
-    ],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '.env',
+    }),
+    MetricsModule,
+    AccountModule,
+    LedgerModule,
+    TransactionModule,
+    FxModule,
+    PayrollModule,
+    AdminModule,
+  ],
 })
-export class AppModule { }
+export class AppModule {}

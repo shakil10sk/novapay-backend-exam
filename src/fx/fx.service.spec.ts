@@ -22,7 +22,10 @@ describe('FxService (unit)', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         FxService,
-        { provide: getRepositoryToken(FxQuote, 'fxConnection'), useValue: mockRepo },
+        {
+          provide: getRepositoryToken(FxQuote, 'fxConnection'),
+          useValue: mockRepo,
+        },
         { provide: MetricsService, useValue: mockMetrics },
       ],
     }).compile();
@@ -32,7 +35,12 @@ describe('FxService (unit)', () => {
 
   it('createQuote: issues quote when provider up', async () => {
     process.env.FX_PROVIDER_STATUS = 'up';
-    const dto: any = { baseCurrency: 'USD', quoteCurrency: 'EUR', amount: '100.00', userId: 'user-1' };
+    const dto: any = {
+      baseCurrency: 'USD',
+      quoteCurrency: 'EUR',
+      amount: '100.00',
+      userId: 'user-1',
+    };
 
     const saved = {
       id: 'q-1',
@@ -51,7 +59,11 @@ describe('FxService (unit)', () => {
     const result = await service.createQuote(dto);
     expect(mockRepo.create).toHaveBeenCalled();
     expect(mockRepo.save).toHaveBeenCalled();
-    expect(result).toMatchObject({ id: 'q-1', baseCurrency: 'USD', quoteCurrency: 'EUR' });
+    expect(result).toMatchObject({
+      id: 'q-1',
+      baseCurrency: 'USD',
+      quoteCurrency: 'EUR',
+    });
   });
 
   it('getQuote: returns secondsRemaining and updates expired status', async () => {
@@ -97,7 +109,12 @@ describe('FxService (unit)', () => {
 
   it('createQuote: throws when FX provider is down', async () => {
     process.env.FX_PROVIDER_STATUS = 'down';
-    const dto: any = { baseCurrency: 'USD', quoteCurrency: 'EUR', amount: '5.00', userId: 'user-2' };
+    const dto: any = {
+      baseCurrency: 'USD',
+      quoteCurrency: 'EUR',
+      amount: '5.00',
+      userId: 'user-2',
+    };
     await expect(service.createQuote(dto)).rejects.toThrow();
     expect(mockMetrics.fxProviderFailures.inc).toHaveBeenCalled();
   });

@@ -5,7 +5,7 @@ import { TransactionModule } from '../transaction/transaction.module';
 import { AccountModule } from '../account/account.module';
 
 @Module({
-    imports: [LedgerModule, TransactionModule, AccountModule],
-    controllers: [AdminController],
+  imports: [LedgerModule, TransactionModule, AccountModule],
+  controllers: [AdminController],
 })
-export class AdminModule { }
+export class AdminModule {}
